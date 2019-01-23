@@ -44,7 +44,6 @@ class Game:
         self.tile_img = pg.image.load(path.join(img_folder, TILE_IMG)).convert_alpha()
 
     def new(self):
-        # initialize all variables and do all the setup for a new game
         self.all_sprites = pg.sprite.Group()
         self.walls = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
@@ -62,10 +61,9 @@ class Game:
         self.camera = Camera(self.map.width, self.map.height)
 
     def run(self):
-        # game loop - set self.playing = False to end the game
         self.playing = True
         while self.playing:
-            self.dt = self.clock.tick(FPS) / 1000.0  # fix for Python 2.x
+            self.dt = self.clock.tick(FPS) / 1000.0
             self.events()
             self.update()
             self.draw()
@@ -75,7 +73,6 @@ class Game:
         sys.exit()
 
     def update(self):
-        # update portion of the game loop
         self.all_sprites.update()
         self.camera.update(self.player)
         hits = pg.sprite.groupcollide(self.mobs, self.cannons, False, True)
