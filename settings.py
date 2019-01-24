@@ -40,3 +40,15 @@ MOB_SPEED = random.randrange(100, 200)
 MOB_HIT_RECT = pg.Rect(0, 0, 80, 80)
 MOB_SPAWN_TIME = 2000
 MOB_HEALTH = 100
+MOB_KNOCKBACK = 20
+MOB_DAMAGE = 20
+MOB_SPEEDS = [150, 100, 75, 125]
+AVR = 70
+DTR = 50
+
+#oh my god why was adding audio so hard
+BGM = 'bgm.ogg'
+OH_NO = ['oof.wav', 'ouchie.wav']
+NERD_DOWN = ['yippekeeyahheeyapeeahkayoh.wav']
+PEW_PEW = ['bang.wav', 'blammo.wav', 'kablooie.wav', 'bonk.wav']
+WHY = 'level_start.wav'
