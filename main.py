@@ -25,16 +25,20 @@ def draw_player_health(surf, x, y, pct):
 
 class Game:
     def __init__(self):
+        pg.mixer.pre_init(44100, -16, 2, 2048)
+        pg.mixer.init()
         pg.init()
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
         self.load_data()
         self.font_name = pg.font.match_font(FONT)
+        pg.mixer.music.play(loops = -1)
 
     def load_data(self):
         game_folder = path.dirname(__file__)
         img_folder = path.join(game_folder, 'img')
+        aud_folder = path.join(game_folder, 'aud')
         self.map = Map(path.join(game_folder, 'map.txt'))
         self.player_img = pg.image.load(path.join(img_folder, PLAYER_IMG)).convert_alpha()
         self.player_img = pg.transform.scale(self.player_img, (TILESIZE, TILESIZE))
@@ -42,6 +46,19 @@ class Game:
         self.mob_img = pg.image.load(path.join(img_folder, MOB_IMG)).convert_alpha()
         self.mob_img = pg.transform.scale(self.mob_img, (TILESIZE, TILESIZE))
         self.tile_img = pg.image.load(path.join(img_folder, TILE_IMG)).convert_alpha()
+        #music stuff
+        pg.mixer.music.load(path.join(aud_folder, BGM))
+        self.level_start = pg.mixer.Sound(path.join(aud_folder, WHY))
+        self.shoot_sounds = {}
+        self.shoot_sounds['cannon'] = []
+        for snd in PEW_PEW:
+            self.shoot_sounds['cannon'].append(pg.mixer.Sound(path.join(aud_folder, snd)))
+        self.ouch = []
+        for snd in OH_NO:
+            self.ouch.append(pg.mixer.Sound(path.join(aud_folder, snd)))
+        self.nerd_down = []
+        for snd in NERD_DOWN:
+            self.nerd_down.append(pg.mixer.Sound(path.join(aud_folder, snd)))
 
     def new(self):
         self.all_sprites = pg.sprite.Group()
@@ -54,11 +71,12 @@ class Game:
                     self.image = self.tile_img
                 if tile == '1':
                     Wall(self, col, row)
-                if tile == 'M':
-                    Mob(self, col, row)
                 if tile == 'P':
                     self.player = Player(self, col, row)
+                if tile == 'M':
+                    Mob(self, col, row)
         self.camera = Camera(self.map.width, self.map.height)
+        self.level_start.play()
 
     def run(self):
         self.playing = True
@@ -73,15 +91,24 @@ class Game:
         sys.exit()
 
     def update(self):
+        # update portion of the game loop
         self.all_sprites.update()
         self.camera.update(self.player)
-        hits = pg.sprite.groupcollide(self.mobs, self.cannons, False, True)
+        # mobs hit player
         hits = pg.sprite.spritecollide(self.player, self.mobs, False, collide_hit_rect)
         for hit in hits:
+            choice(self.ouch).play()
             self.player.health -= MOB_DAMAGE
             hit.vel = vec(0, 0)
             if self.player.health <= 0:
                 self.playing = False
+        if hits:
+            self.player.pos += vec(MOB_KNOCKBACK, 0).rotate(-hits[0].rot)
+        # bullets hit mobs
+        hits = pg.sprite.groupcollide(self.mobs, self.cannons, False, True)
+        for hit in hits:
+            hit.health -= CANNON_DAMAGE
+            hit.vel = vec(0, 0)
 
     def draw_grid(self):
         for x in range(0, WIDTH, TILESIZE):
@@ -107,6 +134,7 @@ class Game:
         pg.display.flip()
 
     def events(self):
+        # catch all events here
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.quit()
@@ -122,24 +150,23 @@ class Game:
                 if event.type == pg.QUIT:
                     waiting = False
                     self.running = False
-                if pg.key.get_pressed()[pg.K_RETURN]:
+                if event.type == pg.KEYUP:
                     waiting = False
-                    self.screen.fill(LIGHTGREY)
 
     def show_start_screen(self):
         self.screen.fill(LIGHTGREY)
-        self.draw_text("WELCOME TO GAME", 48, WHITE, WIDTH / 2, HEIGHT / 2)
-        pg.display.flip()
-        self.wait_for_key()
-        self.draw_text("SPACE TO SHOOT. ARROWS TO MOVE.", 48, WHITE, WIDTH / 2, HEIGHT / 2)
-        pg.display.flip()
-        self.wait_for_key()
-        self.draw_text("GOOD LUCK.", 48, WHITE, WIDTH / 2, HEIGHT / 2)
+        self.draw_text("game jam", 48, WHITE, WIDTH / 2, HEIGHT / 2)
         pg.display.flip()
         self.wait_for_key()
 
     def show_go_screen(self):
-        pass
+        self.screen.fill(BLACK)
+        self.draw_text("GAME OVER", self.title_font, 100, RED,
+                       WIDTH / 2, HEIGHT / 2, align="center")
+        self.draw_text("Press a key to start", self.title_font, 75, WHITE,
+                       WIDTH / 2, HEIGHT * 3 / 4, align="center")
+        pg.display.flip()
+        self.wait_for_key()
 
 g = Game()
 g.show_start_screen()
