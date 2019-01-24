@@ -1,24 +1,25 @@
 import pygame as pg
 from settings import *
 from camera_and_stuff import collide_hit_rect
+from random import choice
 vec = pg.math.Vector2
 
 def collide_with_walls(sprite, group, dir):
     if dir == 'x':
         hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
         if hits:
-            if sprite.vel.x > 0:
+            if hits[0].rect.centerx > sprite.hit_rect.centerx:
                 sprite.pos.x = hits[0].rect.left - sprite.hit_rect.width / 2
-            if sprite.vel.x < 0:
+            if hits[0].rect.centerx < sprite.hit_rect.centerx:
                 sprite.pos.x = hits[0].rect.right + sprite.hit_rect.width / 2
             sprite.vel.x = 0
             sprite.hit_rect.centerx = sprite.pos.x
     if dir == 'y':
         hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
         if hits:
-            if sprite.vel.y > 0:
+            if hits[0].rect.centery > sprite.hit_rect.centery:
                 sprite.pos.y = hits[0].rect.top - sprite.hit_rect.height / 2
-            if sprite.vel.y < 0:
+            if hits[0].rect.centery < sprite.hit_rect.centery:
                 sprite.pos.y = hits[0].rect.bottom + sprite.hit_rect.height / 2
             sprite.vel.y = 0
             sprite.hit_rect.centery = sprite.pos.y
@@ -57,6 +58,7 @@ class Player(pg.sprite.Sprite):
                 self.last_shot = now
                 dir = vec(1, 0).rotate(-self.rot)
                 Cannon(self.game, self.pos, dir)
+                choice(self.game.shoot_sounds['cannon']).play()
 
     def update(self):
         self.get_keys()
@@ -86,13 +88,22 @@ class Mob(pg.sprite.Sprite):
         self.rect.center = self.pos
         self.rot = 0
         self.health = MOB_HEALTH
+        self.speed = choice(MOB_SPEEDS)
+
+    def avoid_mobs(self):
+        for mob in self.game.mobs:
+            if mob != self:
+                dist = self.pos - mob.pos
+                if 0 < dist.length() < AVR:
+                    self.acc += dist.normalize()
 
     def update(self):
         self.rot = (self.game.player.pos - self.pos).angle_to(vec(1, 0))
         self.image = pg.transform.rotate(self.game.mob_img, self.rot)
-        self.rect = self.image.get_rect()
         self.rect.center = self.pos
-        self.acc = vec(MOB_SPEED, 0).rotate(-self.rot)
+        self.acc = vec(1, 0).rotate(-self.rot)
+        self.avoid_mobs()
+        self.acc.scale_to_length(self.speed)
         self.acc += self.vel * -1
         self.vel += self.acc * self.game.dt
         self.pos += self.vel * self.game.dt + 0.5 * self.acc * self.game.dt ** 2
@@ -102,6 +113,7 @@ class Mob(pg.sprite.Sprite):
         collide_with_walls(self, self.game.walls, 'y')
         self.rect.center = self.hit_rect.center
         if self.health <= 0:
+            choice(self.game.nerd_down).play()
             self.kill()
 
     def draw_health(self):
@@ -148,3 +160,4 @@ class Cannon(pg.sprite.Sprite):
             self.kill()
         if pg.time.get_ticks() - self.spawn_time > CANNON_LIFE:
             self.kill()
+
