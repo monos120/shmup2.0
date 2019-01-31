@@ -32,7 +32,6 @@ class Game:
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
         self.load_data()
-        self.font_name = pg.font.match_font(FONT)
         pg.mixer.music.play(loops = -1)
 
     def load_data(self):
@@ -91,24 +90,25 @@ class Game:
         sys.exit()
 
     def update(self):
-        # update portion of the game loop
         self.all_sprites.update()
         self.camera.update(self.player)
-        # mobs hit player
         hits = pg.sprite.spritecollide(self.player, self.mobs, False, collide_hit_rect)
         for hit in hits:
             choice(self.ouch).play()
             self.player.health -= MOB_DAMAGE
             hit.vel = vec(0, 0)
             if self.player.health <= 0:
-                self.playing = False
+                self.death_screen()
+                self.new()
         if hits:
             self.player.pos += vec(MOB_KNOCKBACK, 0).rotate(-hits[0].rot)
-        # bullets hit mobs
         hits = pg.sprite.groupcollide(self.mobs, self.cannons, False, True)
         for hit in hits:
             hit.health -= CANNON_DAMAGE
             hit.vel = vec(0, 0)
+        if len(self.mobs) == 0:
+            self.show_game_over()
+            self.new()
 
     def draw_grid(self):
         for x in range(0, WIDTH, TILESIZE):
@@ -117,31 +117,31 @@ class Game:
             pg.draw.line(self.screen, LIGHTGREY, (0, y), (WIDTH, y))
 
     def draw_text(self, text, size, color, x, y):
-        font = pg.font.Font(self.font_name, size)
+        font = pg.font.Font(path.join('redline.ttf'), 40)
         text_surface = font.render(text, True, color)
         text_rect = text_surface.get_rect()
         text_rect.midtop = (x, y)
         self.screen.blit(text_surface, text_rect)
-# plague rat
+
     def draw(self):
-        pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
+        pg.display.set_caption("SEA INVADER")
         self.screen.fill(BGCOLOR)
         for sprite in self.all_sprites:
             if isinstance(sprite, Mob):
                 sprite.draw_health()
             self.screen.blit(sprite.image, self.camera.apply(sprite))
         draw_player_health(self.screen, 10, 10, self.player.health / PLAYER_HEALTH)
+        self.draw_text('Enemies: {}'.format(len(self.mobs)), 30, WHITE, WIDTH - 120, 10)
         pg.display.flip()
-
+		
     def events(self):
-        # catch all events here
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.quit()
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     self.quit()
-
+                    
     def wait_for_key(self):
         waiting = True
         while waiting:
@@ -152,25 +152,41 @@ class Game:
                     self.running = False
                 if event.type == pg.KEYUP:
                     waiting = False
+					
+    def uhhh(self):
+         waiting = True
+         while waiting:
+            self.clock.tick(FPS)
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    waiting = False
+                    self.running = False
+                if event.type == pg.KEYDOWN:
+                    waiting = False
 
     def show_start_screen(self):
-        self.screen.fill(LIGHTGREY)
-        self.draw_text("game jam", 48, WHITE, WIDTH / 2, HEIGHT / 2)
+        self.screen.fill(BGCOLOR)
+        self.draw_text("SEA INVADER", 48, WHITE, WIDTH / 2, HEIGHT / 3)
+        self.draw_text("WASD to move, space to shoot.", 28, WHITE, WIDTH / 2, HEIGHT / 2)
         pg.display.flip()
         self.wait_for_key()
-
-    def show_go_screen(self):
+		
+    def death_screen(self):
         self.screen.fill(BLACK)
-        self.draw_text("GAME OVER", self.title_font, 100, RED,
-                       WIDTH / 2, HEIGHT / 2, align="center")
-        self.draw_text("Press a key to start", self.title_font, 75, WHITE,
-                       WIDTH / 2, HEIGHT * 3 / 4, align="center")
+        self.draw_text("INVADERS WIN!", 64, WHITE, WIDTH / 2, HEIGHT / 3)
+        self.draw_text("Press space to play again.", 24, WHITE, WIDTH / 2, HEIGHT / 2)
         pg.display.flip()
-        self.wait_for_key()
-
+        self.uhhh()
+			
+    def show_game_over(self):
+        self.screen.fill(BGCOLOR)
+        self.draw_text("YOU WIN!", 64, WHITE, WIDTH / 2, HEIGHT / 3)
+        self.draw_text("Press space to play again.", 24, WHITE, WIDTH / 2, HEIGHT / 2)
+        pg.display.flip()
+        self.uhhh()
+	
 g = Game()
-g.show_start_screen()
 while True:
+    g.show_start_screen()
     g.new()
     g.run()
-    g.show_go_screen()
